@@ -3,25 +3,58 @@ package main
 import (
 	"flag"
 	"fmt"
-	lab2 "github.com/roman-mazur/architecture-lab-2"
+	"io"
+	"os"
+	"strings"
+
+	lab2 "github.com/MaksimkaKrul/KPILAB2"
 )
 
 var (
 	inputExpression = flag.String("e", "", "Expression to compute")
-	// TODO: Add other flags support for input and output configuration.
+	inputFile       = flag.String("f", "", "Input file with expression")
+	outputFile      = flag.String("o", "", "Output file for result")
 )
 
 func main() {
 	flag.Parse()
 
-	// TODO: Change this to accept input from the command line arguments as described in the task and
-	//       output the results using the ComputeHandler instance.
-	//       handler := &lab2.ComputeHandler{
-	//           Input: {construct io.Reader according the command line parameters},
-	//           Output: {construct io.Writer according the command line parameters},
-	//       }
-	//       err := handler.Compute()
+	if (*inputExpression != "" && *inputFile != "") || (*inputExpression == "" && *inputFile == "") {
+		fmt.Fprintln(os.Stderr, "Error: Use either -e or -f, not both")
+		os.Exit(1)
+	}
 
-	res, _ := lab2.PrefixToPostfix("+ 2 2")
-	fmt.Println(res)
+	var input io.Reader
+	if *inputExpression != "" {
+		input = strings.NewReader(*inputExpression)
+	} else {
+		file, err := os.Open(*inputFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error opening file: %v\n", err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		input = file
+	}
+
+	var output io.Writer = os.Stdout
+	if *outputFile != "" {
+		file, err := os.Create(*outputFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating file: %v\n", err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		output = file
+	}
+
+	handler := &lab2.ComputeHandler{
+		Input:  input,
+		Output: output,
+	}
+
+	if err := handler.Compute(); err != nil {
+		fmt.Fprintf(os.Stderr, "Computation error: %v\n", err)
+		os.Exit(1)
+	}
 }
